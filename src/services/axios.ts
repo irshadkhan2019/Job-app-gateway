@@ -12,10 +12,12 @@ export class AxiosService {
     this.axios = this.axiosCreateInstance(baseUrl, serviceName);
   }
 
+  // adding GATEWAY_JWT_TOKEN to axios call so that other services can recognizr the call is coming from gateway
   public axiosCreateInstance(baseUrl: string, serviceName?: string): ReturnType<typeof axios.create> {
     let requestGatewayToken = '';
     if (serviceName) {
       requestGatewayToken = sign({ id: serviceName }, `${config.GATEWAY_JWT_TOKEN}`);
+      console.log(`Gateway token created for service ${serviceName} with base url ${baseUrl} `)
     }
     const instance: ReturnType<typeof axios.create> = axios.create({
       baseURL: baseUrl,
@@ -27,6 +29,7 @@ export class AxiosService {
       },
       withCredentials: true
     });
+    console.log(`added gateway token b4 sending request to service ${baseUrl}${serviceName}`)
     return instance;
   }
 }
