@@ -62,6 +62,7 @@ class AuthService {
     return response;
   }
 
+  //eg. /auth/search/gig/0/10/forward?query=programming&delivery_time=3&minPrice=5&maxPrice=20
   async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
     const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
     return response;
