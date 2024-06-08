@@ -1,12 +1,13 @@
 import { config } from '@gateway/config';
 import { GatewayCache } from '@gateway/redis/gateway.cache';
-import { IMessageDocument, winstonLogger } from '@irshadkhan2019/job-app-shared';
+import { IMessageDocument, IOrderDocument, IOrderNotifcation, winstonLogger } from '@irshadkhan2019/job-app-shared';
 import { Server, Socket } from 'socket.io';
 import { io, Socket as SocketClient } from 'socket.io-client';
 import { Logger } from 'winston';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewaySocket', 'debug');
 let chatSocketClient: SocketClient;
+let orderSocketClient: SocketClient;
 
 export class SocketIOAppHandler {
   private io: Server;
@@ -16,10 +17,12 @@ export class SocketIOAppHandler {
     this.io = io;
     this.gatewayCache = new GatewayCache();
     this.chatSocketServiceIOConnections();
+    this.orderSocketServiceIOConnections();
   }
 
   public listen(): void {
     this.chatSocketServiceIOConnections();
+    this.orderSocketServiceIOConnections();
     this.io.on('connection', async (socket: Socket) => {
         // events coming from client React app here server listening for getLoggedInUsers event
         
@@ -77,5 +80,33 @@ export class SocketIOAppHandler {
       this.io.emit('message updated', data);
     });
 
+  }
+
+  private orderSocketServiceIOConnections(): void {
+    orderSocketClient = io(`${config.ORDER_BASE_URL}`, {
+      transports: ['websocket', 'polling'],
+      secure: true
+    });
+
+    orderSocketClient.on('connect', () => {
+      log.info('OrderService socket connected');
+    });
+
+    orderSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+      log.log('error', 'OrderSocket disconnect reason:', reason);
+      orderSocketClient.connect();
+    });
+
+    orderSocketClient.on('connect_error', (error: Error) => {
+      log.log('error', 'OrderService socket connection error:', error);
+      orderSocketClient.connect();
+    });
+
+    // custom event from order service
+    orderSocketClient.on('order notification', (order: IOrderDocument, notification: IOrderNotifcation) => {
+      // emit send to frontend 
+      this.io.emit('order notification', order, notification);
+
+    });
   }
 };
